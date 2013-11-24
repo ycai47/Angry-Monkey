@@ -53,6 +53,15 @@ void deleteTile(int row, int column);
 void paaUpdate(int power, int angle);
 void hint(int row, int column, int power, int angle);
 void run_trajectory(int *world);
+void Next(int column,int row, int type, int strength);
+
+typedef struct Node{
+    int column;
+    int row;
+    int type;
+    int strength;
+    struct *next;
+}Node;
 
 // Global variables for push buttons
 char volatile power=PHIGH, angle=45, fire;
@@ -116,14 +125,6 @@ int main() {
     
         int i, num_cannon=10;
 	    char pb;
-        typedef struct Node{
-            int column;
-            int row;
-            int type;
-            int strength;
-            struct *next;
-        }Node;
-        Node *head = NULL;
         //get pb
         while(1){
             // it's basically impossible to get a keyboard to function in the same way as mbed pushbuttons so...
@@ -176,24 +177,42 @@ int main() {
                             printf("Angle:%d PLOW\n", angle);
             }
         }
-        int index = 0;
-         //index as number of existing object
-        while (index < world[1]){
-            if (world[index*4+4] == 84){
-                treeleft = world[index*4+3]-1;
-                //find the column left of tree trunk as treeleft
-                int indexin = 0;
-                while (indexin < world[1]){
-                    if (world[i*4+3] == treeleft){
-                        Next((world[i*4+3]),(world[i*4+2]),(world[i*4+4]),(world[i*4+5]);
-                    }
-                    indexin++;
-                }
+        treearray = searchtree(int *world);
+        treeBoundaries = treeboundaries(int *treearray);
+        int numtree;
+        while (i<(sizeof(treeBoundaries)/sizeof(int)){
+            if (i%2 ==0){
+                numtree++;
+            }
+            i++;
+        }
+        int treeLeft[numtree];
+        int treeRight[numtree];
+        int l = 0;
+        //find the column left/right of tree trunk as treeLeft/treeRight
+        while (i<(sizeof(treeBoundaries)/sizeof(int)){
+            if (i%2 ==0){
+                treeLeft[l] = treeBoundaries[i]-1;
+                l++;
             }
             else{
-                index++;
+                treeRight[l] = treeBoundaries[i]+1;
+                l++;
+            }
+            i++;
+        }
+        Node *head = NULL;
+        int indexin = 0;
+        while (indexin < world[1]){
+            if (world[indexin*4+3] == treeLeft[i]){
+                Next((world[indexin*4+3]),(world[indexin*4+2]),(world[indexin*4+4]),(world[indexin*4+5]));
+            }
+            else if (world[indexin*4+3] == treeRight[i]){
+                Next((world[indexin*4+3]),(world[indexin*4+2]),(world[indexin*4+4]),(world[indexin*4+5]));     
             }
         }
+}
+                
         //have fun... 
         
         /****    END - your code stops here   ****/
@@ -215,6 +234,66 @@ void Next(int column,int row, int type, int strength){
     Newone->strength = strength;
     Newone->next = head->next;
     head->next = Newone;
+}
+int searchtree(int *world){
+    //find all columns of squares of tree trunk in ascending order
+    int index=0;
+    int length=0;
+    while(index<world[1]){
+        if (world[index*4+4] == 84){
+            length +=1;
+        }
+        index++;
+    }
+    int treearray[length];
+    index = 0;
+    int l=0;
+    while(index<world[1]){
+        if (world[index*4+4] == 84){
+            treearray[l] = world[index*4+3];
+            l++;
+        }
+        index++;
+    }
+    int c,d,swap;
+    for (c=0;c<(length-1),c++){
+        for (d=0,d<(length-1),d++){
+            if (treearray[d]>treearray[d+1]){
+                swap = treearray[d];
+                treearray[d] = treearray[d+1];
+                treearray[d+1] = swap;
+            }
+        }
+    }
+    return(treearray);
+}
+
+int treeboundaries(int *treearray){
+    int treeBound = 1;
+    for (i=0;i<(length-1),i++){
+        if (treearray[i+1] != treearray[i]){
+            treeBound++;            
+        }
+    }
+    int treeBoundaries[treeBound];
+    int l=0;
+    for (i=0;i<(length-1),i++){
+        if (treearray[i+1] != treearray[i]){
+            treeBoundaries[l] = treearray[i+1];
+            l++;            
+        }
+    }
+    return(treeBoundaries);
+}
+
+void Brancharray(int columns,int columne){
+    for (i=columns, i<columne, i++){
+
+    }
+
+}
+
+void connectnode()/{
 }
 
 void run_trajectory(int *world){
