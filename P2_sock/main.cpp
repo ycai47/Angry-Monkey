@@ -116,7 +116,14 @@ int main() {
     
         int i, num_cannon=10;
 	    char pb;
-        
+        typedef struct Node{
+            int column;
+            int row;
+            int type;
+            int strength;
+            struct *next;
+        }Node;
+        Node *head = NULL;
         //get pb
         while(1){
             // it's basically impossible to get a keyboard to function in the same way as mbed pushbuttons so...
@@ -169,7 +176,24 @@ int main() {
                             printf("Angle:%d PLOW\n", angle);
             }
         }
-        
+        int index = 0;
+         //index as number of existing object
+        while (index < world[1]){
+            if (world[index*4+4] == 84){
+                treeleft = world[index*4+3]-1;
+                //find the column left of tree trunk as treeleft
+                int indexin = 0;
+                while (indexin < world[1]){
+                    if (world[i*4+3] == treeleft){
+                        Next((world[i*4+3]),(world[i*4+2]),(world[i*4+4]),(world[i*4+5]);
+                    }
+                    indexin++;
+                }
+            }
+            else{
+                index++;
+            }
+        }
         //have fun... 
         
         /****    END - your code stops here   ****/
@@ -177,6 +201,20 @@ int main() {
         close(socket_fd);
     }
     //end loop
+}
+
+void Next(int column,int row, int type, int strength){
+    Node *Newone;
+    Newone = (Node *) malloc(sizeof(Node));
+    if (Newone == NULL){
+        exit(1);
+    }
+    Newone->column = column;
+    Newone->row = row;
+    Newone->type = type;
+    Newone->strength = strength;
+    Newone->next = head->next;
+    head->next = Newone;
 }
 
 void run_trajectory(int *world){
