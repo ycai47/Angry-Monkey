@@ -166,7 +166,7 @@ int main() {
                             printf("Angle:%d PLOW\n", angle);
             }
         }
-    
+        updateShot(row,column,'1');
         
         //have fun... 
         
@@ -175,17 +175,15 @@ int main() {
         close(socket_fd);
     }
     //end loop
-
 }
 
-void run_test_trajectory(int *world){
+void run_trajectory(int *world){
   //Just for test...
-  int i,j,temp = '1';
+  int i=0,j=0,temp;
   while(temp != '0'){
     j = floor(sin(angle)/cos(angle)*i-GRAVITY*(i/(power*cos(angle)))^2/2);
     i++;
     updateShot(i,j,0);
-    sleep(1);
     hint(i+2, i+3,2,1);
   } 
   
