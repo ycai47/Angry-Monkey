@@ -32,6 +32,11 @@
 #define COM_ADDR	        "socks/monkeys_socket"
 #define UNIX_PATH_MAX       100
 
+
+#include <iostream>
+//using namespace std;
+
+
 //function prototypes
 int  invert(int value);
 void startGame(void);
@@ -47,12 +52,11 @@ void colorTile(int row, int column, int strength);
 void deleteTile(int row, int column);
 void paaUpdate(int power, int angle);
 void hint(int row, int column, int power, int angle);
-void run_test_trajectory(int *world);
+void run_trajectory(int *world);
 
 // Global variables for push buttons
 char volatile power=PHIGH, angle=45, fire;
 int connection_fd;
-
 //main
 int main() {
 
@@ -122,8 +126,7 @@ int main() {
             if(pb=='z'){
                     printf("Z was pressed: FIRE!!!\n");
                     pb4_hit_callback(); 
-		    
-		    run_trajectory(world);
+		            run_trajectory(world);
             } else if(pb=='x'){
                     printf("X was pressed: decreasing angle\n");
                     pb3_hit_callback(); 
@@ -166,7 +169,6 @@ int main() {
                             printf("Angle:%d PLOW\n", angle);
             }
         }
-        updateShot(row,column,'1');
         
         //have fun... 
         
@@ -178,19 +180,48 @@ int main() {
 }
 
 void run_trajectory(int *world){
-  //Just for test...
-  int i=0,j=0,temp;
-  while(temp != '0'){
-    j = floor(sin(angle)/cos(angle)*i-GRAVITY*(i/(power*cos(angle)))^2/2);
-    i++;
-    updateShot(i,j,0);
-    hint(i+2, i+3,2,1);
-  } 
-  
-  for(i=0;i<5;i++){       
-    deleteTile(world[4*i+2],world[4*i+3]);
-    updateShot(i-1,i,1);
-  }
+  int i=0,j=0,k=0,temp = 1;
+  //j is looping column(x), k is looping row(y)
+  while (j<(sqrt(world[0]))){
+        while (i<world[1]){
+            //std::cout << "test a i " << i << std::endl;
+            //std::cout << k << "and " << j << std::endl;
+            //std::cout << world[4*i+2] << std::endl;
+            //std::cout << world[4*i+3] << std::endl;
+            if (world[4*i+2] == k && world[4*i+3] == j && world[4*i+5] != 0){
+                temp = 0;
+                if (world[4*i+5]>1){
+                world[4*i+5] = world[4*i+5]-1;
+                colorTile(k,j,world[4*i+5]);
+                }
+                else{
+                    world[4*i+5] = 0;
+                    deleteTile(k,j);
+                }
+            //if strenth is greater than 1 when it is hit, decrement strenth,
+            //or just delete the block
+                break;
+            //if the ball hit something, stop
+            }
+            else{
+                i++;
+            //otherwise, keep going till find the possible point of hit         
+            }
+        }
+        if (temp == 0){
+            break;
+        }
+        else{
+        i = 0;
+        j++;
+        k = floor(sin(angle)/cos(angle)*j-GRAVITY*(j/(power*cos(angle)))*(j/(power*cos(angle)))/2);
+        updateShot(k,j,1);
+        sleep(1);
+        }
+    }
+    //if no hit-point is found, update trajectory to next move
+ //   hint(i+2, i+3,2,1);
+    updateShot(0,0,1);
 }
 
 //fcn to send update
