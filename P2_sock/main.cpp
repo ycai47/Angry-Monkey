@@ -36,6 +36,14 @@
 #include <iostream>
 //using namespace std;
 
+//define a node with same structure as given world array.
+typedef struct Node{
+    int column;
+    int row;
+    int type;
+    int strength;
+    Node *next;
+}Node;
 
 //function prototypes
 int  invert(int value);
@@ -55,16 +63,10 @@ void hint(int row, int column, int power, int angle);
 void run_trajectory(int *world);
 int* searchtree(int *world);
 int* treeboundaries(int *treearray);
-void Brancharray(int columns,int columne,int *world);
+Node* Brancharray(int columns,int columne,int *world);
 void connectnode(int branchArray);
 
-typedef struct Node{
-    int column;
-    int row;
-    int type;
-    int strength;
-    Node *next;
-}Node;
+
 
 // Global variables for push buttons
 char volatile power=PHIGH, angle=45, fire;
@@ -185,18 +187,12 @@ int main() {
         int *treeBoundaries;
         treearray = searchtree(world);
         treeBoundaries = treeboundaries(treearray);
-        int numtree;
-        i=0;
-        while (i<(sizeof(treeBoundaries)/sizeof(int))){
-            if (i%2 ==0){
-                numtree++;
-            }
-            i++;
-        }
-        int treeLeft[numtree];
-        int treeRight[numtree];
+        //find total number of trees
+        int numtree= sizeof(treeBoundaries)/sizeof(int))/2;
+        int *treeLeft = (int *) malloc(sizeof(int)*numtree);
+        int *treeRight = (int *)malloc(sizeof(int)*numtree);
         int l = 0;
-        //find the column left/right of tree trunk as treeLeft/treeRight
+        //store the column left/right of tree trunk as treeLeft/treeRight
         i=0;
         while (i<(sizeof(treeBoundaries)/sizeof(int))){
             if (i%2 ==0){
@@ -210,12 +206,13 @@ int main() {
             i++;
         }
         Node **rootList;
+        //create a linked list of roots connected to tree trunk
         int indexin = 0;
         while (indexin < world[1]){
             int length=sizeof(treeBoundaries)/sizeof(int);
             for (i=0; i<length; i++){
                 if (world[indexin*4+3] == treeLeft[i] || world[indexin*4+3] == treeRight[i]){
-                    Node *m_Root=(Node *)malloc(sizeof(Node));
+                    Node *m_Root= (Node *) malloc(sizeof(Node));
                     m_Root->column = world[indexin*4+3];
                     m_Root->row = world[indexin*4+2];
                     m_Root->type = world[indexin*4+4];
@@ -242,13 +239,13 @@ int* searchtree(int *world){
         }
         index++;
     }
-    int treearray[length];
+    int *treeArray = (int *) malloc(sizeof(int)*length);
     index = 0;
     int l=0;
     while(index<=world[1]){
         //store column numbers of tree squares in an array
         if (world[index*4+4] == 84){
-            treearray[l] = world[index*4+3];
+            treeArray[l] = world[index*4+3];
             l++;
         }
         index++;
@@ -257,14 +254,14 @@ int* searchtree(int *world){
     for (c=0;c<(length-1);c++){
         //bubble sort the array in ascending order
         for (d=0;d<(length-c-1);d++){
-            if (treearray[d]>treearray[d+1]){
-                swap = treearray[d];
-                treearray[d] = treearray[d+1];
-                treearray[d+1] = swap;
+            if (treeArray[d]>treeArray[d+1]){
+                swap = treeArray[d];
+                treeArray[d] = treeArray[d+1];
+                treeArray[d+1] = swap;
             }
         }
     }
-    return treearray;
+    return treeArray;
 }
 
 int* treeboundaries(int *treearray){
@@ -277,7 +274,7 @@ int* treeboundaries(int *treearray){
             treeBound++;            
         }
     }
-    int treeBoundaries[treeBound];
+    int *treeBoundaries = (int *) malloc(sizeof(int)*treeBound);
     int l=0;
     for (i=0;i<(length);i++){
         //store boundaries of trees to array treeBoundaries
@@ -289,8 +286,8 @@ int* treeboundaries(int *treearray){
     return treeBoundaries;
 }
 
-void Brancharray(int columns,int columne, int *world){
-    //sort objects between two columns (including those two column) according to ascending column
+Node* Brancharray(int columns,int columne, int *world){
+    //sort objects between two columns (including those two column) according to descending column
     int length = 0;
     int i,j;
     for (i=columns; i<=columne; i++){
@@ -302,7 +299,7 @@ void Brancharray(int columns,int columne, int *world){
             j++;
         }
     }
-    Node *branchArray[length];
+    Node *branchArray = (Node *) malloc(length*sizeof(Node));
     //create an node array
     int k = 0;
     for (i=columns; i<=columne; i++){
@@ -311,8 +308,8 @@ void Brancharray(int columns,int columne, int *world){
         while (j<world[1]){
             //store pairs
             if (world[j*4+3]==i){
-                branchArray[k]->row = world[4*j+2];
-                branchArray[k]->column = i;
+                (branchArray+k)->row = world[4*j+2];
+                (branchArray+k)->column = i;
                 k++;
             }
             j++;
@@ -322,18 +319,46 @@ void Brancharray(int columns,int columne, int *world){
         //bubble sort row numbers under each desired column
         for (m=l;m<(k-1);m++){
             for (n=l;n<(k-m-1);n++){
-                if (branchArray[n]->row > branchArray[n+1]->row){
-                    swap->row = branchArray[n]->row;
-                    branchArray[n]->row = branchArray[n+1]->row;
-                    branchArray[n+1]->row = swap->row;
+                if ((branchArray+n)->row < (branchArray+n+1)->row){
+     //demo memcpy
+                    memcpy(swap, (branchArray+n),sizeof(Node));
+                    memcpy((branchArray+n),(branchArray+n+1),sizeof(Node));
+                    memcpy((branchArray+n+1),swap,sizeof(Node));
                 }
             }
         }
     }
 }
 
-void connectnode(int branchArray){
+void connectnode(int numtree, int *Left, int *Right, int *world , Node **rootList){
+    for (j = 0; j<numtree; j++){
+        Node* Array1 = Brancharray(0,Left[j],int *world);
+        Node* Array2 = Brancharray(Left[j],Right[j],int *world);
+        Node* Array3 = Brancharray(Right[j],sqrt(world[0]),int *world);
+    }
+    Node* m_current=rootList;
+    int i = 0;
+    int size=0
+    int length = sizeof(rootList)/sizeof(void *);
+    while(size<length){
 
+        while ((Array+i)->next != NULL){
+            //take prioty connection to top then left/right
+            if (((Array+i)->row +1) == (m_root->row) && ((Array+i)->column) == (m_root->column) || (((Array+i)->row)==(m_root->row) && ((Array+i)->column -1) == (m_root->column)){
+                Node *New = (Node *) malloc(sizeof(Node));
+                New->column = (Array+i)->column;
+                New->row = (Array+i)->row;
+                New->type = (Array+i)->type;
+                New->strength = (Array+i)->strength;
+                New->next = m_current;
+                m_current = New;
+            }
+            i++;
+        }
+        m_current = (rootList+1);
+        i = 0;
+        size++;
+    }
 }
 
 void run_trajectory(int *world){
