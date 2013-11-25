@@ -53,14 +53,17 @@ void deleteTile(int row, int column);
 void paaUpdate(int power, int angle);
 void hint(int row, int column, int power, int angle);
 void run_trajectory(int *world);
-void Next(int column,int row, int type, int strength);
+int* searchtree(int *world);
+int* treeboundaries(int *treearray);
+void Brancharray(int columns,int columne,int *world);
+void connectnode(int branchArray);
 
 typedef struct Node{
     int column;
     int row;
     int type;
     int strength;
-    struct *next;
+    Node *next;
 }Node;
 
 // Global variables for push buttons
@@ -120,9 +123,7 @@ int main() {
         printf("Angry Monkeys\n");
         printf("Push the buttons.\n");
         printf("Z - fire cannon\nX - decrease angle    C - increase angle\nV - toggle power\nR - reset    Q - quit\n");
- 
-        /****   BEGIN - your code goes here for project 2  ****/
-    
+     
         int i, num_cannon=10;
 	    char pb;
         //get pb
@@ -138,6 +139,7 @@ int main() {
             } else if(pb=='x'){
                     printf("X was pressed: decreasing angle\n");
                     pb3_hit_callback(); 
+                    paaUpdate(power,angle);
                     if(power==PHIGH)
                             printf("Angle:%d PHIGH\n", angle);
                     else
@@ -145,6 +147,7 @@ int main() {
             } else if(pb=='c'){
                     printf("C was pressed: increasing angle\n");
                     pb2_hit_callback(); 
+                    paaUpdate(power,angle);
                     if(power==PHIGH)
                             printf("Angle:%d PHIGH\n", angle);
                     else
@@ -152,6 +155,7 @@ int main() {
             } else if(pb=='v'){
                     printf("V was pressed: toggling power\n");
                     pb1_hit_callback(); 
+                    paaUpdate(power,angle);
                     if(power==PHIGH)
                             printf("Angle:%d PHIGH\n", angle);
                     else
@@ -177,10 +181,13 @@ int main() {
                             printf("Angle:%d PLOW\n", angle);
             }
         }
-        treearray = searchtree(int *world);
-        treeBoundaries = treeboundaries(int *treearray);
+        int *treearray;
+        int *treeBoundaries;
+        treearray = searchtree(world);
+        treeBoundaries = treeboundaries(treearray);
         int numtree;
-        while (i<(sizeof(treeBoundaries)/sizeof(int)){
+        i=0;
+        while (i<(sizeof(treeBoundaries)/sizeof(int))){
             if (i%2 ==0){
                 numtree++;
             }
@@ -190,7 +197,8 @@ int main() {
         int treeRight[numtree];
         int l = 0;
         //find the column left/right of tree trunk as treeLeft/treeRight
-        while (i<(sizeof(treeBoundaries)/sizeof(int)){
+        i=0;
+        while (i<(sizeof(treeBoundaries)/sizeof(int))){
             if (i%2 ==0){
                 treeLeft[l] = treeBoundaries[i]-1;
                 l++;
@@ -201,45 +209,34 @@ int main() {
             }
             i++;
         }
-        Node *head = NULL;
+        Node **rootList;
         int indexin = 0;
         while (indexin < world[1]){
-            if (world[indexin*4+3] == treeLeft[i]){
-                Next((world[indexin*4+3]),(world[indexin*4+2]),(world[indexin*4+4]),(world[indexin*4+5]));
+            int length=sizeof(treeBoundaries)/sizeof(int);
+            for (i=0; i<length; i++){
+                if (world[indexin*4+3] == treeLeft[i] || world[indexin*4+3] == treeRight[i]){
+                    Node *m_Root=(Node *)malloc(sizeof(Node));
+                    m_Root->column = world[indexin*4+3];
+                    m_Root->row = world[indexin*4+2];
+                    m_Root->type = world[indexin*4+4];
+                    m_Root->strength = world[indexin*4+5];
+                    m_Root->next = NULL;
+                    *rootList = m_Root;
+                }
             }
-            else if (world[indexin*4+3] == treeRight[i]){
-                Next((world[indexin*4+3]),(world[indexin*4+2]),(world[indexin*4+4]),(world[indexin*4+5]));     
-            }
+            indexin++;
         }
-}
-                
-        //have fun... 
-        
-        /****    END - your code stops here   ****/
         free(world);  
         close(socket_fd);
     }
     //end loop
 }
-
-void Next(int column,int row, int type, int strength){
-    Node *Newone;
-    Newone = (Node *) malloc(sizeof(Node));
-    if (Newone == NULL){
-        exit(1);
-    }
-    Newone->column = column;
-    Newone->row = row;
-    Newone->type = type;
-    Newone->strength = strength;
-    Newone->next = head->next;
-    head->next = Newone;
-}
-int searchtree(int *world){
+int* searchtree(int *world){
     //find all columns of squares of tree trunk in ascending order
     int index=0;
     int length=0;
-    while(index<world[1]){
+    while(index<=world[1]){
+        //find total number of tree trunk squares
         if (world[index*4+4] == 84){
             length +=1;
         }
@@ -248,7 +245,8 @@ int searchtree(int *world){
     int treearray[length];
     index = 0;
     int l=0;
-    while(index<world[1]){
+    while(index<=world[1]){
+        //store column numbers of tree squares in an array
         if (world[index*4+4] == 84){
             treearray[l] = world[index*4+3];
             l++;
@@ -256,8 +254,9 @@ int searchtree(int *world){
         index++;
     }
     int c,d,swap;
-    for (c=0;c<(length-1),c++){
-        for (d=0,d<(length-1),d++){
+    for (c=0;c<(length-1);c++){
+        //bubble sort the array in ascending order
+        for (d=0;d<(length-c-1);d++){
             if (treearray[d]>treearray[d+1]){
                 swap = treearray[d];
                 treearray[d] = treearray[d+1];
@@ -265,35 +264,76 @@ int searchtree(int *world){
             }
         }
     }
-    return(treearray);
+    return treearray;
 }
 
-int treeboundaries(int *treearray){
-    int treeBound = 1;
-    for (i=0;i<(length-1),i++){
+int* treeboundaries(int *treearray){
+    //find the boudaries(column) of trees
+    int i,treeBound = 1;
+    int length = sizeof(treearray)/sizeof(int);
+    for (i=0;i<(length);i++){
+        //find how many sides are there
         if (treearray[i+1] != treearray[i]){
             treeBound++;            
         }
     }
     int treeBoundaries[treeBound];
     int l=0;
-    for (i=0;i<(length-1),i++){
+    for (i=0;i<(length);i++){
+        //store boundaries of trees to array treeBoundaries
         if (treearray[i+1] != treearray[i]){
             treeBoundaries[l] = treearray[i+1];
             l++;            
         }
     }
-    return(treeBoundaries);
+    return treeBoundaries;
 }
 
-void Brancharray(int columns,int columne){
-    for (i=columns, i<columne, i++){
-
+void Brancharray(int columns,int columne, int *world){
+    //sort objects between two columns (including those two column) according to ascending column
+    int length = 0;
+    int i,j;
+    for (i=columns; i<=columne; i++){
+        //total objects in the range
+        while (j<=world[1]){
+            if (world[j*4+3]==i){
+                length++;
+            }
+            j++;
+        }
     }
-
+    Node *branchArray[length];
+    //create an node array
+    int k = 0;
+    for (i=columns; i<=columne; i++){
+        //store and sort all location pairs in array
+        int l=k;
+        while (j<world[1]){
+            //store pairs
+            if (world[j*4+3]==i){
+                branchArray[k]->row = world[4*j+2];
+                branchArray[k]->column = i;
+                k++;
+            }
+            j++;
+        }
+        int m,n;
+        Node *swap;
+        //bubble sort row numbers under each desired column
+        for (m=l;m<(k-1);m++){
+            for (n=l;n<(k-m-1);n++){
+                if (branchArray[n]->row > branchArray[n+1]->row){
+                    swap->row = branchArray[n]->row;
+                    branchArray[n]->row = branchArray[n+1]->row;
+                    branchArray[n+1]->row = swap->row;
+                }
+            }
+        }
+    }
 }
 
-void connectnode()/{
+void connectnode(int branchArray){
+
 }
 
 void run_trajectory(int *world){
