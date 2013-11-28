@@ -83,6 +83,8 @@ void hint(int row, int column, int power, int angle);
 void run_test_trajectory(int *world);
 int* getTreeBoundry(int *world);
 rootList* getRootList(int *world, int *RootColArray);
+int*  getContent(int *world);
+
 // void getTreeBoundry(int *world);
 // Global variables for push buttons
 
@@ -146,34 +148,45 @@ int main() {
 
 /* initialize enviroment start from here   */
 
-            int* RootColArray = getTreeBoundry(world);  
-           // for debug
-
-            int m_size=sizeof(RootColArray)/sizeof(int);
-            printf("[DEBUG] m_size :  %d\n", m_size);
-            for (int i = 0; i < m_size; ++i)
-            {
-
-                printf("[DEBUG] one tree @ col : %d\n", *(RootColArray+i) );
-
-            }
 
 
-            rootList* m_rootlist=getRootList(world,RootColArray);
+
+            // printf("start the test Content\n");
+
+            int* ptr_Content=getContent(world);
+            int* RootColArray = getTreeBoundry(world); 
+
+            // int tmp_size=ptr_Content[0];
+            // printf("[DEBUG] contentSize %d\n", tmp_size);
+            // for (int i = 0; i < tmp_size; ++i)
+            // {
+            //     printf("[DEBUG] One Object  row @ %d, col @ %d , type is %d \n", ptr_Content[4*i+1], ptr_Content[4*i+2], ptr_Content[4*i+3] );
+            // }
+
+            // for debug
+            // int m_size= RootColArray[0];
+            // printf("[DEBUG] m_size :  %d\n", m_size);
+            // for (int i = 1; i <= m_size; ++i)
+            // {
+
+            //     printf("[DEBUG] one tree @ col : %d\n", *(RootColArray+i) );
+
+            // }
+
 /************** debug purpuse to check rootlist ******************/
+            rootList* m_rootlist=getRootList(world,RootColArray);
+//           rootNode* log_rootNode=m_rootlist->Head;
 
-            rootNode* log_rootNode=m_rootlist->Head;
+            // while(log_rootNode!=NULL){
 
-            while(log_rootNode!=NULL){
+            //     Node* log_node=log_rootNode->data;
+            //     printf("[DEBUG] current Root, row @ %d, col @ %d. \n", log_node->row, log_node->col );
 
-                Node* log_node=log_rootNode->data;
-                printf("[DEBUG] current Root, row @ %d, col @ %d. \n", log_node->row, log_node->col );
+            //     log_rootNode=log_rootNode->next;
 
-                log_rootNode=log_rootNode->next;
+            // }
 
-            }
 
-            
         /****   BEGIN - your code goes here for project 2  ****/
 
             int i, num_cannon=10;
@@ -441,7 +454,7 @@ void getworld (int**world, unsigned char *World){
 // 1.   we need to find out all tree cols, only need the tree cols. 
 //      after that, sorting cols, we can find the not continuous cols, 
 int* getTreeBoundry(int *world){
-//void  getTreeBoundry(int *world){
+
     // contain not duplicate col # make it a array
     int *treeColContainer=(int *)malloc(20* sizeof(int ));
     int treeColContainerSize=0;
@@ -535,60 +548,64 @@ int* getTreeBoundry(int *world){
         }
     }
 
-    int m_BoundrySize = (treeColContainerSize==0) ? 1 : 2 ;
-  //      printf("[DEBUG] B size%d\n", m_BoundrySize );
+    int m_BoundrySize = 0;
 
-    for (int i = 1; i < treeColContainerSize-1; ++i)
+    int *ptr_root = (int *)malloc( (2*treeColContainerSize) * sizeof(int));    
+    for (int i = 0; i < treeColContainerSize; ++i)
     {
-        int m_cur=treeColContainer[i];
- //       printf("[DEBUG] %d\n", m_cur );
-        if (m_cur==((treeColContainer[i+1])-1) && (m_cur== ((treeColContainer[i+2])-2)))
-        {   
-            // if continous, 
-            treeColContainer[i]=-1;
 
-        }else {
-            m_BoundrySize++;
-        }
+        int m_cur=treeColContainer[i];
+        
+        ptr_root[2*i+0] = m_cur - 1;
+        ptr_root[2*i+1] = m_cur + 1;
+
 
     }
-    
-    
-    // Answer granted, we get correct tree boundry. 
-    // return as
-    // return it's treeboundry size. 
- //   printf("size is %d\n", m_BoundrySize);
-    int *returnPointer = (int *)malloc( m_BoundrySize * sizeof(int));    
 
-    if(!returnPointer){
+    int *m_returnPointer = (int *)malloc( (2*treeColContainerSize) * sizeof(int)); 
+
+    if(!m_returnPointer){
         printf("malloc failed\n");
         return NULL;
     }
 
-    for (int i = 0; i < treeColContainerSize; ++i)
+    int index= 0;
+    
+    for (int i = 0; i < 2*treeColContainerSize; ++i)
     {
-        if ( *(treeColContainer+i)!= -1)
-        {
+        int m_current= ptr_root[i];
+        bool dirty = false;
+        for (int j = 0; j < index; ++j)
+        {   
+            if (m_returnPointer[j]==m_current)
+            {
+                dirty=true;
+                break;
+            }
 
-            returnPointer[i]=treeColContainer[i];
         }
-    }
-
-    // cut the tree, to get  the rootCol. 
-    for (int i = 0; i < m_BoundrySize; i+=2)
-    {
-        returnPointer[i]=returnPointer[i]-1;
-    }
-    for (int i = 1; i < m_BoundrySize; i+=2)
-    {
-        returnPointer[i]=returnPointer[i]+1;
+        if (dirty==false)
+        {
+            m_returnPointer[index]=m_current;
+            index++;
+        }
 
     }
-    // for (int i = 0; i < m_BoundrySize; ++i)
-    // {
-    //     printf("[DEBUG] one tree @ col : %d\n", returnPointer[i] );
-    // }
+
+    int *returnPointer = (int * )malloc( (index+1) * sizeof(int ));
+    returnPointer[0] = index;
+    memcpy(returnPointer+1, m_returnPointer, index*sizeof(int));
+
+    for (int i = 1; i <= index; ++i)
+    {
+        printf("[DEBUG] one tree @ col : %d\n", returnPointer[i] );
+    }
     // // until here, we have a array
+    //free treecontainer, avoid memery leak
+    free(treeColContainer);
+    free(ptr_root);
+    free(m_returnPointer);
+
     return returnPointer;
 }
 
@@ -676,3 +693,101 @@ rootList* getRootList(int *world, int *RootColArray){
 
 
 }
+
+// this will return anything is not tree, so including branches, and monkeys
+// just for easy development
+
+int* getContent(int *world){
+// void  getContent(int *world){
+
+    // everything, including tree, branches, and monkeys;
+    int allSize=world[1];
+    int* ptr_contain=(int *)malloc(4*allSize*sizeof(int));
+    int contentSize=0;
+    int CurrentType;
+    for (int i = 0; i < allSize; ++i)
+    {
+        CurrentType=world[4*i+4];
+        if (CurrentType!=84)
+        {
+            memcpy((ptr_contain+4*contentSize), (world+4*i+2),4*sizeof(int));
+            contentSize++;
+
+        }
+
+    }
+    // printf("[DEBUG] allSize %d\n", allSize);
+    printf("[DEBUG] contentSize %d\n", contentSize);
+
+
+    int* ptr_return=(int *)malloc((4*contentSize+1)*sizeof(int));
+    if (ptr_return==NULL)
+    {
+        printf("malloc failed\n");
+        return NULL;
+    }
+    ptr_return[0]=contentSize;
+    printf("size is %d \n",  ptr_return[0]);
+    memcpy(ptr_return+1,ptr_contain, 4*contentSize*sizeof(int));
+    free(ptr_contain);
+
+    // for (int i = 0; i < contentSize; ++i)
+    // {
+    //     printf("[DEBUG] One Object  row @ %d, col @ %d , type is %d \n", ptr_return[4*i+1], ptr_return[4*i+2], ptr_return[4*i+3] );
+    // }
+
+    return ptr_return;
+
+
+}
+
+
+
+// input one root, output a list 
+
+void getBranchList(Node* root, int* content){
+
+    int contentSize=content[0];
+
+    Node* m_node=root;
+
+
+
+
+    for (int i = 0; i < contentSize; ++i)
+    {   
+        int m_row = content[4*i+1];
+        int m_col = content[4*i+2];
+
+        if ((    ( ((m_node->row == m_row+1 ) || (m_node->row == m_row - 1 )) && (m_node->col == m_col) ) || 
+                        ( ((m_node->col == m_col+1 ) || (m_node->col == m_col - 1 )) && (m_node->row == m_row) )     )  && m_node->parent==NULL) ||
+            ()
+        {
+
+                Node* m_match =(Node *)malloc(sizeof (Node));
+                m_match->row =m_row;
+                m_match->col =m_col;
+                if (m_node->childA==NULL)
+                {
+                    m_node->childA=m_match;
+
+                } else if (m_node->childB ==  NULL && m_node->childA != m_match)
+                {
+                    m_node->childB=m_match;
+                }else if( m_node->childA!=m_match && m_node->childB!=m_match){
+                    m_node-> childC=m_match;
+                }
+                m_match->con++;
+                m_match->parent=m_node;
+                break;
+        }
+
+    }
+
+    m_node=m_match;
+
+
+
+
+}
+
