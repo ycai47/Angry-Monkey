@@ -32,30 +32,65 @@
 #define COM_ADDR            "socks/monkeys_socket"
 #define UNIX_PATH_MAX       100
 
+
+// rootNode def
+ typedef struct Node
+ {
+
+    int row;
+    int col;
+    int con;
+    Node* parent;
+    Node* childA;
+    Node* childB;
+    Node* childC;
+
+}Node;
+
+typedef struct rootNode
+{
+    Node *data;
+    rootNode *next; 
+
+}rootNode;
+
+// rootList define
+typedef struct rootList
+{
+    rootNode *Head;
+    rootNode *Tail;
+
+}rootList;
+
+
+
+
 //function prototypes
- int  invert(int value);
- void startGame(void);
- int  waitForAck(void);
- char get_pb_zxcvqr(void);
- void pb1_hit_callback(void);
- void pb2_hit_callback(void);
- void pb3_hit_callback(void);
- void pb4_hit_callback(void);
- void getworld (int**world, unsigned char *World);
- void updateShot(int row, int column, int del);
- void colorTile(int row, int column, int strength);
- void deleteTile(int row, int column);
- void paaUpdate(int power, int angle);
- void hint(int row, int column, int power, int angle);
- void run_test_trajectory(int *world);
- int* getTreeBoundry(int *world);
+int  invert(int value);
+void startGame(void);
+int  waitForAck(void);
+char get_pb_zxcvqr(void);
+void pb1_hit_callback(void);
+void pb2_hit_callback(void);
+void pb3_hit_callback(void);
+void pb4_hit_callback(void);
+void getworld (int**world, unsigned char *World);
+void updateShot(int row, int column, int del);
+void colorTile(int row, int column, int strength);
+void deleteTile(int row, int column);
+void paaUpdate(int power, int angle);
+void hint(int row, int column, int power, int angle);
+void run_test_trajectory(int *world);
+int* getTreeBoundry(int *world);
+rootList* getRootList(int *world, int *RootColArray);
 // void getTreeBoundry(int *world);
 // Global variables for push buttons
- char volatile power=PHIGH, angle=45, fire;
- int connection_fd;
+
+char volatile power=PHIGH, angle=45, fire;
+int connection_fd;
 
 //main
- int main() {
+int main() {
 
     START:    
     //variables
@@ -109,18 +144,36 @@
             printf("Push the buttons.\n");
             printf("Z - fire cannon\nX - decrease angle    C - increase angle\nV - toggle power\nR - reset    Q - quit\n");
 
-            int* RootColArry = getTreeBoundry(world);  
+/* initialize enviroment start from here   */
+
+            int* RootColArray = getTreeBoundry(world);  
            // for debug
 
-            int m_size=sizeof(RootColArry)/sizeof(int);
-             printf("[DEBUG] m_size :  %d\n", m_size);
+            int m_size=sizeof(RootColArray)/sizeof(int);
+            printf("[DEBUG] m_size :  %d\n", m_size);
             for (int i = 0; i < m_size; ++i)
             {
 
-                printf("[DEBUG] one tree @ col : %d\n", *(RootColArry+i) );
+                printf("[DEBUG] one tree @ col : %d\n", *(RootColArray+i) );
 
             }
 
+
+            rootList* m_rootlist=getRootList(world,RootColArray);
+/************** debug purpuse to check rootlist ******************/
+
+            rootNode* log_rootNode=m_rootlist->Head;
+
+            while(log_rootNode!=NULL){
+
+                Node* log_node=log_rootNode->data;
+                printf("[DEBUG] current Root, row @ %d, col @ %d. \n", log_node->row, log_node->col );
+
+                log_rootNode=log_rootNode->next;
+
+            }
+
+            
         /****   BEGIN - your code goes here for project 2  ****/
 
             int i, num_cannon=10;
@@ -536,6 +589,90 @@ int* getTreeBoundry(int *world){
     //     printf("[DEBUG] one tree @ col : %d\n", returnPointer[i] );
     // }
     // // until here, we have a array
-   return returnPointer;
+    return returnPointer;
 }
 
+
+
+// in here, we have Root Col, so we need to search to world, 
+// identify the root item, which its col# matched 
+// store them into a struct, and link it into list. 
+
+rootList* getRootList(int *world, int *RootColArray){
+
+    // in world, store whole raw data, RootColArray contain all rootCol number
+
+    // search all world, find match. 
+
+    rootList *m_rootlist=(rootList*)malloc(sizeof(rootList));
+    m_rootlist->Head=NULL;
+    m_rootlist->Tail=NULL;
+
+
+    int m_rootBoundSize= sizeof(RootColArray)/sizeof(int);
+    int m_worldSize=world[1];
+
+    for (int i = 0; i < m_rootBoundSize; ++i)
+    {
+        int m_colNum = RootColArray[i];
+
+        for (int j = 0; j < m_worldSize; ++j)
+        {
+            int m_currentItemCol = world[4*j+3];
+            //find match
+            if (m_currentItemCol==m_colNum)
+            {
+
+                // first create a Node,  TODO
+                // assume Node is create, call m_node
+                Node* m_node=(Node*)malloc(sizeof(Node));
+                m_node->row=world[4*j+2];
+                m_node->col=world[4*j+3];
+                m_node->con=-1;         // let -1 be init
+                m_node->parent=NULL;
+                m_node->childA=NULL;
+                m_node->childB=NULL;
+                m_node->childC=NULL;
+                // initialize node
+
+                // then create a rootNode, to contain Node
+                rootNode* m_curRoot=(rootNode*)malloc(sizeof(rootNode));
+                m_curRoot->data=m_node;
+                m_curRoot->next=NULL;
+                // initial done, 
+                
+                // link into List
+
+                // at head, 
+                if (m_rootlist->Head==NULL)
+                {
+                    m_rootlist->Head=m_curRoot;
+                    m_rootlist->Tail=m_curRoot;
+                }else{
+                    // not at head, 
+                    m_rootlist->Tail->next=m_curRoot;
+                    m_rootlist->Tail=m_curRoot;
+                }
+                // done linking, 
+            }
+        }        
+    }
+    // that's it. 
+    
+    // this part is for debug purpuse
+
+    // rootNode* log_rootNode=m_rootlist->Head;
+
+    // while(log_rootNode!=NULL){
+
+    //     Node* log_node=log_rootNode->data;
+    //     printf("[DEBUG] current Root, row @ %d, col @ %d. \n", log_node->row, log_node->col );
+
+    //     log_rootNode=log_rootNode->next;
+
+    // }
+
+    return m_rootlist;
+
+
+}
