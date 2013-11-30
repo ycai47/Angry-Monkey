@@ -39,6 +39,7 @@
 
     int row;
     int col;
+    int visit;
     int con;
     Node* parent;
     Node* childA;
@@ -53,6 +54,37 @@ typedef struct rootNode
     rootNode *next; 
 
 }rootNode;
+
+// this NodeContainer can replace above def
+typedef struct nodeContainer
+{
+    Node *data;
+    nodeContainer *next; 
+
+}nodeContainer;
+
+typedef struct nodeList
+{
+    nodeContainer *Head;
+    nodeContainer *Tail;
+
+}nodeList;
+
+
+typedef struct listContainer
+{
+    nodeList *data;
+    listContainer *next; 
+
+}listContainer;
+
+
+typedef struct listList
+{
+    listContainer *Head;
+    listContainer *Tail;
+
+}listList;
 
 // rootList define
 typedef struct rootList
@@ -84,6 +116,8 @@ void run_test_trajectory(int *world);
 int* getTreeBoundry(int *world);
 rootList* getRootList(int *world, int *RootColArray);
 int*  getContent(int *world);
+listList* getBranchList(Node* root, int* content);
+listList* conbineBranchHead(rootList* m_rootlist, int* ptr_Content);
 
 // void getTreeBoundry(int *world);
 // Global variables for push buttons
@@ -173,18 +207,38 @@ int main() {
 
             // }
 
-/************** debug purpuse to check rootlist ******************/
+/************** debug purpose to check rootlist ******************/
             rootList* m_rootlist=getRootList(world,RootColArray);
-//           rootNode* log_rootNode=m_rootlist->Head;
+            rootNode* log_rootNode=m_rootlist->Head;
 
-            // while(log_rootNode!=NULL){
+            while(log_rootNode!=NULL){
 
-            //     Node* log_node=log_rootNode->data;
-            //     printf("[DEBUG] current Root, row @ %d, col @ %d. \n", log_node->row, log_node->col );
+                Node* log_node=log_rootNode->data;
+                printf("[DEBUG] current Root, row @ %d, col @ %d. \n", log_node->row, log_node->col );
 
-            //     log_rootNode=log_rootNode->next;
+                log_rootNode=log_rootNode->next;
 
-            // }
+            }
+
+/************* debug purpose to check branchlist *****************/
+
+        listList* m_llist = conbineBranchHead(m_rootlist,  ptr_Content);
+
+        //listList* m_llist = getBranchList(m_rootlist->Head->data, ptr_Content);
+
+        // listContainer* m_loglist = m_llist->Head;
+        // while(m_loglist!=NULL){
+            
+        //         nodeContainer* m_debug = m_loglist->data->Head;
+        //         while(m_debug!=NULL){
+
+        //             printf("[DEBUG] Connection @ row: %d, col: %d\n", m_debug->data->row, m_debug->data->col);
+        //             m_debug=m_debug->next;
+        //         }
+
+        //         m_loglist = m_loglist->next; 
+
+        // }
 
 
         /****   BEGIN - your code goes here for project 2  ****/
@@ -225,21 +279,21 @@ int main() {
                     else
                         printf("Angle:%d PLOW\n", angle); 
                 } else if(pb=='q'){
-                   printf("EXIT\n");
-                   free(world);
-                   close(socket_fd);
-                   exit(1);
-               }  else if(pb=='r'){
+                 printf("EXIT\n");
+                 free(world);
+                 close(socket_fd);
+                 exit(1);
+             }  else if(pb=='r'){
                 printf("RESTART\n");
                 free(world);
                 close(socket_fd);
                 goto START;         
             }  else {
-               printf("testing\n");
-               printf("string1: %s\nstring2: %s\n", "hello", "world");
-               printf("int: %d, int: %d\n", world[2], world[3]); 
-               printf("Shots left:%d\n", num_cannon);
-               if(power==PHIGH)
+             printf("testing\n");
+             printf("string1: %s\nstring2: %s\n", "hello", "world");
+             printf("int: %d, int: %d\n", world[2], world[3]); 
+             printf("Shots left:%d\n", num_cannon);
+             if(power==PHIGH)
                 printf("Angle:%d PHIGH\n", angle);
             else
                 printf("Angle:%d PLOW\n", angle);
@@ -548,7 +602,6 @@ int* getTreeBoundry(int *world){
         }
     }
 
-    int m_BoundrySize = 0;
 
     int *ptr_root = (int *)malloc( (2*treeColContainerSize) * sizeof(int));    
     for (int i = 0; i < treeColContainerSize; ++i)
@@ -584,6 +637,18 @@ int* getTreeBoundry(int *world){
             }
 
         }
+
+        for (int i = 0; i < treeColContainerSize; ++i)
+        {
+
+            if (m_current==treeColContainer[i])
+            {
+                dirty=true;
+                break;
+            }
+        }
+
+
         if (dirty==false)
         {
             m_returnPointer[index]=m_current;
@@ -595,7 +660,7 @@ int* getTreeBoundry(int *world){
     int *returnPointer = (int * )malloc( (index+1) * sizeof(int ));
     returnPointer[0] = index;
     memcpy(returnPointer+1, m_returnPointer, index*sizeof(int));
-
+    printf("[DEBUG] total tree boundary size : %d \n", returnPointer[0]);
     for (int i = 1; i <= index; ++i)
     {
         printf("[DEBUG] one tree @ col : %d\n", returnPointer[i] );
@@ -620,16 +685,16 @@ rootList* getRootList(int *world, int *RootColArray){
     // in world, store whole raw data, RootColArray contain all rootCol number
 
     // search all world, find match. 
-
+    printf("[DEBUG] Stepped into getRootList function\n" );
     rootList *m_rootlist=(rootList*)malloc(sizeof(rootList));
     m_rootlist->Head=NULL;
     m_rootlist->Tail=NULL;
 
 
-    int m_rootBoundSize= sizeof(RootColArray)/sizeof(int);
+    int m_rootBoundSize= RootColArray[0];
     int m_worldSize=world[1];
 
-    for (int i = 0; i < m_rootBoundSize; ++i)
+    for (int i = 1; i < m_rootBoundSize+1; ++i)
     {
         int m_colNum = RootColArray[i];
 
@@ -645,7 +710,8 @@ rootList* getRootList(int *world, int *RootColArray){
                 Node* m_node=(Node*)malloc(sizeof(Node));
                 m_node->row=world[4*j+2];
                 m_node->col=world[4*j+3];
-                m_node->con=-1;         // let -1 be init
+                m_node->visit=-1;         // let -1 be init
+                m_node->con=-1;
                 m_node->parent=NULL;
                 m_node->childA=NULL;
                 m_node->childB=NULL;
@@ -678,7 +744,7 @@ rootList* getRootList(int *world, int *RootColArray){
     
     // this part is for debug purpuse
 
-    // rootNode* log_rootNode=m_rootlist->Head;
+    //  rootNode* log_rootNode=m_rootlist->Head;
 
     // while(log_rootNode!=NULL){
 
@@ -745,49 +811,260 @@ int* getContent(int *world){
 
 // input one root, output a list 
 
-void getBranchList(Node* root, int* content){
+listList* getBranchList(Node* root, int* content){
+
+    listList* m_llist=(listList*)malloc(sizeof(listList));
+    m_llist->Head = NULL;
+    m_llist->Tail = NULL;
 
     int contentSize=content[0];
+            
+    Node *m_node=root;
+            // new object, mark -1 as initialized
+    m_node->visit = -1;
+    m_node->con = -1;
 
-    Node* m_node=root;
+    do{
 
 
 
+                    // if it is return from its children, skip the find children part. 
+        if (m_node->con == -1){
 
-    for (int i = 0; i < contentSize; ++i)
-    {   
-        int m_row = content[4*i+1];
-        int m_col = content[4*i+2];
-
-        if ((    ( ((m_node->row == m_row+1 ) || (m_node->row == m_row - 1 )) && (m_node->col == m_col) ) || 
-                        ( ((m_node->col == m_col+1 ) || (m_node->col == m_col - 1 )) && (m_node->row == m_row) )     )  && m_node->parent==NULL) ||
-            ()
-        {
-
-                Node* m_match =(Node *)malloc(sizeof (Node));
-                m_match->row =m_row;
-                m_match->col =m_col;
-                if (m_node->childA==NULL)
+            m_node->visit = 0;
+            m_node->con = 0;
+            //printf("[DEBUG] now Coordinate is at row@ %d, col@ %d\n",m_node->row, m_node->col );
+                        // find children. 
+            for (int i = 0; i < contentSize; ++i)
+            {   
+                int m_row = content[4*i+1];
+                int m_col = content[4*i+2];
+                //printf("[DEBUG] currentPos row@ %d, col@ %d\n", m_row, m_col);
+                if (m_row==4 && m_col==19)
                 {
-                    m_node->childA=m_match;
+                //printf("[DEBUG] currentPos 4,19");
+                //printf("testing: %d\n",((m_node->col == m_col+1 ) || (m_node->col == m_col - 1 )) && (m_node->row == m_row) );
 
-                } else if (m_node->childB ==  NULL && m_node->childA != m_match)
-                {
-                    m_node->childB=m_match;
-                }else if( m_node->childA!=m_match && m_node->childB!=m_match){
-                    m_node-> childC=m_match;
                 }
-                m_match->con++;
-                m_match->parent=m_node;
-                break;
+                            // find match connection Node
+                if (    ( ((m_node->row == m_row+1 ) || (m_node->row == m_row - 1 )) && (m_node->col == m_col) ) || 
+                    ( ((m_node->col == m_col+1 ) || (m_node->col == m_col - 1 )) && (m_node->row == m_row) )    ) {
+
+                            // whether connected already or not. 
+                printf("[DEBUG] stepped inside \n");
+                            // is that parent, 
+                    if (m_node->parent != NULL) 
+                    {
+                         printf("[DEBUG] stepped inside parent \n");
+                        if (m_row == m_node->parent->row && m_col == m_node->parent->col)
+                        {
+                            continue;
+                        }
+                                // skip this one. 
+                    }
+                    m_node->visit++;
+                    m_node->con++;
+                            // create a object and connected into the child
+                    Node* m_match =(Node *)malloc(sizeof (Node));
+                    m_match->row    = m_row;
+                    m_match->col    = m_col;
+                    m_match->visit  = -1;
+                    m_match->con    = -1;
+                    m_match->parent = m_node;
+
+                    switch(m_node->con){
+
+                        case 1:
+                        m_node->childA=m_match;
+                        break;
+                        case 2:
+                        m_node->childB=m_match;
+                        break;
+                        case 3:
+                        m_node->childC=m_match;
+                        break;
+                        default:
+                        printf("[DEBUG] con value is not expected %d, at (%d,%d)\n", m_node->con, m_node->row,m_node->col);
+                        break;
+
+                    }
+
+                //   break;
+                }
+            }
+
+                        // now, connected every children done. 
         }
 
-    }
 
-    m_node=m_match;
-
+            // wait, if there is no connection, mean need to trace back it's parent, TODO
 
 
+            // con is null then, no connection, con = null visit all children 
+
+        if (m_node->con==0)
+        {
+                        //  TODO get a branchHead, traceback the whole thing. 
+                        //  create a Single Direction list to store this branch. 
+                        //  and NodeContainer.         
+
+
+                            // [DEBUG] maybe cause the pointer disappear. 
+            nodeList* m_branchlist=(nodeList*)malloc(sizeof(nodeList));
+            nodeContainer* m_nodeContainer=(nodeContainer*)malloc(sizeof(nodeContainer));                
+            m_nodeContainer->data = m_node;
+            m_nodeContainer->next = NULL;
+
+            m_branchlist->Head = m_nodeContainer;
+            m_branchlist->Tail = m_nodeContainer;
+
+            while(m_branchlist->Tail->data != root){
+                nodeContainer* next_nodeContainer=(nodeContainer*)malloc(sizeof(nodeContainer));
+                next_nodeContainer->data = m_nodeContainer->data->parent;
+                next_nodeContainer->next = NULL;
+                m_nodeContainer->next = next_nodeContainer;
+                m_nodeContainer = next_nodeContainer;
+                m_branchlist->Tail = m_nodeContainer;
+            }
+
+                listContainer* m_listHead = (listContainer*)malloc(sizeof(listContainer));
+                m_listHead->data = m_branchlist;
+                m_listHead->next = NULL;
+
+            if (m_llist->Head==NULL)
+            {
+                printf("add the first branchlist.\n");
+                m_llist->Head = m_listHead;
+                m_llist->Tail = m_listHead;
+
+            //     nodeContainer* m_debug = m_llist->Head->data->Head;
+            //     while(m_debug!=NULL){
+
+            //     printf("[DEBUG] Connection @ row: %d, col: %d\n", m_debug->data->row, m_debug->data->col);
+            //     m_debug=m_debug->next;
+            // }
+
+            }else{
+                printf("add the another branchlist at Tail.\n");
+                m_llist->Tail->next = m_listHead;
+                m_llist->Tail = m_listHead;
+
+            //      nodeContainer* m_debug = m_llist->Tail->data->Head;
+            //     while(m_debug!=NULL){
+
+            //     printf("[DEBUG] Connection @ row: %d, col: %d\n", m_debug->data->row, m_debug->data->col);
+            //     m_debug=m_debug->next;
+            // }
+
+            }
+
+                        //  after there, m_branchlist is return one link as a branch head
+                        //  so we are going to trace back, for security visit mark as -1 so
+                        //  we say job done here. 
+
+                            //m_node->visit --;
+            m_node = m_node->parent;
+
+        }else{
+
+            if (m_node->visit == 0)
+            {
+                                // go back it's parent, 
+                                //m_node->visit --;       // for debug
+                m_node = m_node->parent;
+
+            }else{
+                                    //visit conCount - con +1 parent
+                int visitType =m_node->con - m_node->visit;
+
+                switch(visitType){
+
+                    case 0 :
+                                                // visit childA
+                    m_node->visit--;
+                    m_node=m_node->childA;
+                    break;
+                    case 1 :
+                                                // visit childB
+                    m_node->visit--;                
+                    m_node=m_node->childB;
+                    break;
+                    case 2:
+                                                // visit childC
+                    m_node->visit--;
+                    m_node=m_node->childC;
+                    break;
+                    default:
+                    printf("[DEBUG] shouldn't happen.\n");
+                    break;
+
+                }
+
+            }
+
+        }
+
+
+    }while(m_node!=root &&  root->visit==0 );
+        // until it roll back to root. and visited all root children. 
+
+    // listContainer* m_loglist = m_llist->Head;
+    // while(m_loglist!=NULL){
+        
+    //         nodeContainer* m_debug = m_loglist->data->Head;
+    //         while(m_debug!=NULL){
+
+    //             printf("[DEBUG] Connection @ row: %d, col: %d\n", m_debug->data->row, m_debug->data->col);
+    //             m_debug=m_debug->next;
+    //         }
+
+    //         m_loglist = m_loglist->next; 
+
+    // }
+
+    return m_llist;
 
 }
 
+
+    //branch condition
+
+// get a rootlist, then this function, 
+// use every root, get one list, and combine each list
+listList* conbineBranchHead(rootList* m_rootlist, int* ptr_Content){
+
+    // final return 
+    listList* m_llist=(listList*)malloc(sizeof(listList));
+    m_llist->Head = NULL;
+    m_llist->Tail = NULL;
+
+    listList* m_currentList;
+
+    rootNode* m_root=m_rootlist->Head;
+    while(m_root!=NULL){
+
+        Node* m_data=m_root->data;
+        printf("[DEBUG]  current root @ %d,%d\n",m_data->row,m_data->col );
+        m_currentList=getBranchList(m_data,ptr_Content);
+        // read everything from head to tail store into m_llist
+
+        listContainer* m_current= m_currentList->Head;
+        while(m_current != NULL){
+
+            if (m_llist->Head == NULL)
+            {
+                m_llist->Head = m_current;
+                m_llist->Tail = m_current;
+            }else{
+                m_llist->Tail->next =m_current;
+                m_llist->Tail = m_current;
+            }
+            m_current=m_current->next;
+        }
+        m_root=m_root->next;
+
+    }
+
+    return m_llist;
+
+}
