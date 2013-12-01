@@ -123,6 +123,9 @@ listList* getBranchList(Node* root, int* content);
 listList* conbineBranchHead(rootList* m_rootlist, int* ptr_Content);
 void deleteBranch(int row, int col, int* world, listList* m_llist);
 void deleteTree(int row, int col, int* world, listList* m_llist);
+int findMonkey(int* content,  listList* m_llist);
+int getHint(int row, int col);
+
 // void getTreeBoundry(int *world);
 // Global variables for push buttons
 
@@ -140,7 +143,7 @@ int main() {
     struct sockaddr_un address;
     int socket_fd;
     socklen_t address_length;
-    pid_t child;
+    //pid_t child;
 
     socket_fd = socket(AF_UNIX, SOCK_STREAM, 0);
     if (socket_fd < 0){
@@ -180,9 +183,9 @@ int main() {
         fflush(stdout);
         rewind(stdout);
         printf("\033[2J\033[1;1H");
-        printf("Angry Monkeys\n");
-        printf("Push the buttons.\n");
-        printf("Z - fire cannon\nX - decrease angle    C - increase angle\nV - toggle power\nR - reset    Q - quit\n");
+            printf("Angry Monkeys\n");
+            printf("Push the buttons.\n");
+            printf("Z - fire cannon\nX - decrease angle    C - increase angle\nV - toggle power\nR - reset    Q - quit\n");
 
 /* initialize enviroment start from here   */
 
@@ -250,11 +253,21 @@ int main() {
         /************** DEBUG to test the delete function **********/
         //   deleteBranch(15, 33, world, m_llist);
         //   deleteTree(7, 28, world,m_llist);
-        
+
         //  pass the debug test, both function working. 
+        /******************** Test for Hint target  ****************/
 
+        int receive=findMonkey(ptr_Content, m_llist);
+        int hintRow = (receive & 0xFFFF0000) >> 16;
+        int hintCol = (receive & 0X0000FFFF);
 
-            int i, num_cannon=10;
+        // printf("[DEBUG] the hint target is row %d, col %d\n",hintRow,hintCol );
+        // int hintValue=getHint(hintRow,hintCol);
+        // int hintPower = (hintValue & 0xFFFF0000) >> 16;
+        // int hintAngle = (hintValue & 0X0000FFFF);
+        // hint(hintRow, hintCol, hintPower,hintAngle);
+            //int i, 
+            int num_cannon=10;
             char pb;
 
         //get pb
@@ -372,18 +385,18 @@ void run_trajectory(int *world, listList* m_llist){
 
                 switch(objType){
                         case 84:            // this is a tree,
-                            deleteTree(objRow,objCol,world,m_llist);                    
-                            break;
-                    
+                        deleteTree(objRow,objCol,world,m_llist);                    
+                        break;
+
                         case 77:
                             deleteTile(m_row,m_col);    //monkey can directly delete. 
                             break;
-               
-                        case 66:
+
+                            case 66:
                             deleteBranch(objRow,objCol,world,m_llist);        // a branch, 
                             break;
-                
-                        default:
+
+                            default:
                             printf("[DEBUG] unknown type meet\n" );
                             break;
                         }
@@ -406,9 +419,23 @@ void run_trajectory(int *world, listList* m_llist){
             else{
                 i  = 0;
                 m_col++;
-                m_row = floor(sin(angle)/cos(angle)*m_col-GRAVITY*(m_col/(power*cos(angle)))*(m_col/(power*cos(angle)))/2);
+                double radian_angle= (angle/180.0)*PI;
+                double vx=power*cos(radian_angle);
+                double vy=power*sin(radian_angle);
+                double sqpt=m_col/vx;
+
+             //   printf("[DEBUG] the angle is %d and radian_angle IS %2f, PI is %2f\n", angle, radian_angle, PI);
+
+
+                m_row = floor((m_col*vy/vx)- 0.5*(GRAVITY)*sqpt*sqpt);
+               // printf("[DEBUG] x pos %d\n",m_col );
+                //printf("[DEBUG] y pos %d\n",m_row );
+                if (m_row < 0)
+                {
+                    break;
+                }
                 updateShot(m_row,m_col,1);
-                sleep(0.3);
+                sleep(1);
             }
         }
     //if no hit-point is found, update trajectory to next move
@@ -932,12 +959,7 @@ listList* getBranchList(Node* root, int* content){
                 int m_row = content[4*i+1];
                 int m_col = content[4*i+2];
                 //printf("[DEBUG] currentPos row@ %d, col@ %d\n", m_row, m_col);
-                if (m_row==4 && m_col==19)
-                {
-                //printf("[DEBUG] currentPos 4,19");
-                //printf("testing: %d\n",((m_node->col == m_col+1 ) || (m_node->col == m_col - 1 )) && (m_node->row == m_row) );
-
-                }
+                
                             // find match connection Node
                 if (    ( ((m_node->row == m_row+1 ) || (m_node->row == m_row - 1 )) && (m_node->col == m_col) ) || 
                     ( ((m_node->col == m_col+1 ) || (m_node->col == m_col - 1 )) && (m_node->row == m_row) )    ) {
@@ -1232,15 +1254,15 @@ void deleteBranch(int row, int col, int* world, listList* m_llist){
         bool matchFound = false;
         while(m_match!=NULL){
 
-        if (col == m_match->data->col && m_match->data->row == row)
-        {
+            if (col == m_match->data->col && m_match->data->row == row)
+            {
 
             //we find the thing
-            matchFound = true;
-            break;
-        }
+                matchFound = true;
+                break;
+            }
 
-        m_match = m_match->next;
+            m_match = m_match->next;
 
         }
 
@@ -1270,4 +1292,114 @@ void deleteBranch(int row, int col, int* world, listList* m_llist){
 
 
 
+}
+
+
+int findMonkey(int* content,  listList* m_llist){
+
+
+    int contentSize=content[0];
+
+    int targetRow = 999;
+    int targetCol = 999;
+    int i = 0;
+    int standtype;
+
+    int returnCol;
+    int returnRow;
+    while(i < contentSize){
+
+        int m_row = content[4*i+1];
+        int m_col = content[4*i+2];
+        int m_type = content[4*i+3];
+
+        if (m_type == 77 && m_col < targetCol)
+        {
+            targetCol = m_col;
+            targetRow = m_row;
+            if (m_row==targetRow-1 && m_col == targetCol)
+            {
+                    if (m_type == 84 )
+                            standtype =1;
+                    else standtype=0;    // if 66, so type = 0 it's branch
+            }
+        }
+        i++;
+
+    }
+
+    if (standtype == 1)  // tree
+    {
+        returnCol = targetCol;
+        returnRow = 1 ;
+    }else{
+
+    listContainer* m_branchlist = m_llist->Head;
+    while(m_branchlist!=NULL){
+
+        // get branchHead and remember it so we know where we start to delete.
+        nodeContainer* m_match = m_branchlist->data->Head;;
+        while(m_match!=NULL){
+
+            if (targetCol == m_match->data->col && m_match->data->row == targetRow)
+            {
+
+            //we find the thing
+            // m_match is found
+
+                returnRow = m_branchlist->data->Tail->data->row;
+                returnCol = m_branchlist->data->Tail->data->col;
+                break;
+            }
+
+            m_match = m_match->next;
+
+        }
+
+        m_branchlist=m_branchlist->next;
+
+    }
+
+}
+    int returnPack= ((returnRow << 16) | returnCol);
+      
+
+    return returnPack;
+
+}
+
+int getHint(int row, int col){
+    int m_angle = floor(row/(col*1.0));
+    double m_radian_angle= m_angle*PI/180.0;
+    int m_power = sqrt(GRAVITY*col*col/(cos(m_radian_angle)*cos(m_radian_angle))/2/(tan(m_radian_angle)*col- row));
+    int r = 0;
+
+    if (m_power > 7.5){
+        m_power = PHIGH;
+        while (r == 0) {
+
+            int m_row = floor(sin(m_radian_angle)/cos(m_radian_angle)*col - GRAVITY*(col/(power*cos(m_radian_angle)))*(col/(power*cos(m_radian_angle)))/2);
+            if (row == m_row ){
+                r = 1;
+            }
+            else {
+                m_angle++;
+            }
+        }
+    }
+    else{
+        m_power = PLOW;
+        while (r == 0){
+            int m_row=floor(sin(m_radian_angle)/cos(m_radian_angle)*col - GRAVITY*(col/(power*cos(m_radian_angle)))*(col/(power*cos(m_radian_angle)))/2);
+            if (row == m_row){
+                r = 1;
+            }
+            else{
+                m_angle--;
+            }
+        }
+    }
+
+    printf("[DEBUG]  power,%d and angle  %d\n",m_power, m_angle );
+    return 0;
 }
