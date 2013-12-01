@@ -113,12 +113,16 @@ void deleteTile(int row, int column);
 void paaUpdate(int power, int angle);
 void hint(int row, int column, int power, int angle);
 void run_test_trajectory(int *world);
+
+
+void run_trajectory(int *world, listList* m_llist);
 int* getTreeBoundry(int *world);
 rootList* getRootList(int *world, int *RootColArray);
 int*  getContent(int *world);
 listList* getBranchList(Node* root, int* content);
 listList* conbineBranchHead(rootList* m_rootlist, int* ptr_Content);
-
+void deleteBranch(int row, int col, int* world, listList* m_llist);
+void deleteTree(int row, int col, int* world, listList* m_llist);
 // void getTreeBoundry(int *world);
 // Global variables for push buttons
 
@@ -176,9 +180,9 @@ int main() {
         fflush(stdout);
         rewind(stdout);
         printf("\033[2J\033[1;1H");
-            printf("Angry Monkeys\n");
-            printf("Push the buttons.\n");
-            printf("Z - fire cannon\nX - decrease angle    C - increase angle\nV - toggle power\nR - reset    Q - quit\n");
+        printf("Angry Monkeys\n");
+        printf("Push the buttons.\n");
+        printf("Z - fire cannon\nX - decrease angle    C - increase angle\nV - toggle power\nR - reset    Q - quit\n");
 
 /* initialize enviroment start from here   */
 
@@ -209,20 +213,20 @@ int main() {
 
 /************** debug purpose to check rootlist ******************/
             rootList* m_rootlist=getRootList(world,RootColArray);
-            rootNode* log_rootNode=m_rootlist->Head;
+            // rootNode* log_rootNode=m_rootlist->Head;
 
-            while(log_rootNode!=NULL){
+            // while(log_rootNode!=NULL){
 
-                Node* log_node=log_rootNode->data;
-                printf("[DEBUG] current Root, row @ %d, col @ %d. \n", log_node->row, log_node->col );
+            //     Node* log_node=log_rootNode->data;
+            //     printf("[DEBUG] current Root, row @ %d, col @ %d. \n", log_node->row, log_node->col );
 
-                log_rootNode=log_rootNode->next;
+            //     log_rootNode=log_rootNode->next;
 
-            }
+            // }
 
 /************* debug purpose to check branchlist *****************/
 
-        listList* m_llist = conbineBranchHead(m_rootlist,  ptr_Content);
+            listList* m_llist = conbineBranchHead(m_rootlist,  ptr_Content);
 
         //listList* m_llist = getBranchList(m_rootlist->Head->data, ptr_Content);
 
@@ -243,6 +247,13 @@ int main() {
 
         /****   BEGIN - your code goes here for project 2  ****/
 
+        /************** DEBUG to test the delete function **********/
+        //   deleteBranch(15, 33, world, m_llist);
+        //   deleteTree(7, 28, world,m_llist);
+        
+        //  pass the debug test, both function working. 
+
+
             int i, num_cannon=10;
             char pb;
 
@@ -255,8 +266,9 @@ int main() {
                 if(pb=='z'){
                     printf("Z was pressed: FIRE!!!\n");
                     pb4_hit_callback(); 
-                    printf("Trajectory not yet computed...showing a canned one.\n");
-                    run_test_trajectory(world);
+                  //  printf("Trajectory not yet computed...showing a canned one.\n");
+                    //run_test_trajectory(world);
+                    run_trajectory(world, m_llist);
                 } else if(pb=='x'){
                     printf("X was pressed: decreasing angle\n");
                     pb3_hit_callback(); 
@@ -326,207 +338,287 @@ for(i=0;i<5;i++){
 }
 }
 
+
+void run_trajectory(int *world, listList* m_llist){
+
+  int i = 0;
+  int m_row = 0;
+  int m_col = 0; 
+  bool hit = false;
+  int mapSize =world[0];
+  //j is looping column(x), m_row is looping row(y)
+  int objectSize=world[1];
+  while (m_col < sqrt(mapSize)){
+    while (i <objectSize){
+            //std::cout << "test a i " << i << std::endl;
+            //std::cout << m_row << "and " << j << std::endl;
+            //std::cout << world[4*i+2] << std::endl;
+            //std::cout << world[4*i+3] << std::endl;
+        int objRow = world[4*i+2];
+        int objCol = world[4*i+3];
+        int objStr = world[4*i+5];
+        int objType = world[4*i+4];
+
+        if (objRow == m_row && objCol == m_col && objStr != 0){
+
+            objStr--;
+            world[4*i+5]--;
+            if (objStr != 0)
+            {
+                colorTile(m_row , m_col , objStr);
+            }else{
+                //    deleteTile(m_row, m_col);
+                    // delete tile, depend on the type
+
+                switch(objType){
+                        case 84:            // this is a tree,
+                            deleteTree(objRow,objCol,world,m_llist);                    
+                            break;
+                    
+                        case 77:
+                            deleteTile(m_row,m_col);    //monkey can directly delete. 
+                            break;
+               
+                        case 66:
+                            deleteBranch(objRow,objCol,world,m_llist);        // a branch, 
+                            break;
+                
+                        default:
+                            printf("[DEBUG] unknown type meet\n" );
+                            break;
+                        }
+
+                    }
+            //if strenth is greater than 1 when it is hit, decrement strenth,
+            //or just delete the block
+                    hit = true;
+                    break;
+            //if the ball hit something, stop
+                }
+                else{
+                    i ++;
+            //otherwise, keep going till find the possible point of hit         
+                }
+            }
+            if (hit){
+                break;
+            }
+            else{
+                i  = 0;
+                m_col++;
+                m_row = floor(sin(angle)/cos(angle)*m_col-GRAVITY*(m_col/(power*cos(angle)))*(m_col/(power*cos(angle)))/2);
+                updateShot(m_row,m_col,1);
+                sleep(0.3);
+            }
+        }
+    //if no hit-point is found, update trajectory to next move
+ //   hint(i+2, i+3,2,1);
+        updateShot(0,0,1);
+    }
+
+
+
 //fcn to send update
-void updateShot(int row, int column, int del){
+    void updateShot(int row, int column, int del){
     //temp variables
-    char buffer[BUFFSIZE];
-    
+        char buffer[BUFFSIZE];
+
     //construct message
-    sprintf(buffer, "%s-%d-%d-%d;", "update", row, column, del);
+        sprintf(buffer, "%s-%d-%d-%d;", "update", row, column, del);
 
     //send message
-    send(connection_fd, buffer, strlen(buffer),0);
-    waitForAck();
-}
+        send(connection_fd, buffer, strlen(buffer),0);
+        waitForAck();
+    }
 
 //fcn to send color
-void colorTile(int row, int column, int strength){
+    void colorTile(int row, int column, int strength){
     //temp variables
-    char buffer[BUFFSIZE];
-    
+        char buffer[BUFFSIZE];
+
     //construct message
-    sprintf(buffer, "%s-%d-%d-%d;", "color", row, column, strength);
+        sprintf(buffer, "%s-%d-%d-%d;", "color", row, column, strength);
 
     //send message
-    send(connection_fd, buffer, strlen(buffer),0);
-    waitForAck();
-}    
+        send(connection_fd, buffer, strlen(buffer),0);
+        waitForAck();
+    }    
 
 //fcn to send delete
-void deleteTile(int row, int column){
+    void deleteTile(int row, int column){
     //temp variables
-    char buffer[BUFFSIZE];
-    
+        char buffer[BUFFSIZE];
+
     //construct message
-    sprintf(buffer, "%s-%d-%d;", "delete", row, column);
+        sprintf(buffer, "%s-%d-%d;", "delete", row, column);
 
     //send message
-    send(connection_fd, buffer, strlen(buffer),0);
-    waitForAck();
-} 
+        send(connection_fd, buffer, strlen(buffer),0);
+        waitForAck();
+    } 
 
 //fcn to send power and angle
-void paaUpdate(int power, int angle){
+    void paaUpdate(int power, int angle){
     //temp variables
-    char buffer[BUFFSIZE];
-    
+        char buffer[BUFFSIZE];
+
     //construct message
-    sprintf(buffer, "%s-%d-%d;", "paa", power, angle);
+        sprintf(buffer, "%s-%d-%d;", "paa", power, angle);
 
     //send message
-    send(connection_fd, buffer, strlen(buffer),0);
-    waitForAck();
-} 
+        send(connection_fd, buffer, strlen(buffer),0);
+        waitForAck();
+    } 
 
 //fcn to send hint
-void hint(int row, int column, int power, int angle){
+    void hint(int row, int column, int power, int angle){
     //temp variables
-    char buffer[BUFFSIZE];
-    
+        char buffer[BUFFSIZE];
+
     //construct message
-    sprintf(buffer, "%s-%d-%d-%d-%d;", "hint", row, column, power, angle);
+        sprintf(buffer, "%s-%d-%d-%d-%d;", "hint", row, column, power, angle);
 
     //send message
-    send(connection_fd, buffer, strlen(buffer),0);
-    waitForAck();
-}
+        send(connection_fd, buffer, strlen(buffer),0);
+        waitForAck();
+    }
 
 //fcn to get acknowledgement from serial peripheral
-int waitForAck(void) {
+    int waitForAck(void) {
     //get acknowlegement
-    char buffer[BUFFSIZE];
-    double elapsed;
-    time_t start;
-    time_t now;
-    time(&start);
-    while(1) {
-        memset(&buffer[0],0,strlen(buffer));  
-        recv(connection_fd,buffer,BUFFSIZE-1,0);
-        if(strncmp(ACK, buffer, strlen(ACK)) == 0) {
-            break;
-        }
-        memset(&buffer[0],0,strlen(buffer));     
-        time(&now);
-        elapsed = difftime(now, start);
+        char buffer[BUFFSIZE];
+        double elapsed;
+        time_t start;
+        time_t now;
+        time(&start);
+        while(1) {
+            memset(&buffer[0],0,strlen(buffer));  
+            recv(connection_fd,buffer,BUFFSIZE-1,0);
+            if(strncmp(ACK, buffer, strlen(ACK)) == 0) {
+                break;
+            }
+            memset(&buffer[0],0,strlen(buffer));     
+            time(&now);
+            elapsed = difftime(now, start);
         //printf("%.f, ", elapsed);
-        fflush(stdout);
-        if(elapsed >= ACK_TIMEOUT)
-            return 1;
-    }
-    return 0;
-}
-
-//fcn to initialize the frontend display
-void startGame(void) {
-    //temp variables
-    char buffer[BUFFSIZE];
-
-    //construct message
-    sprintf(buffer, "start");
-
-    //send message
-    send(connection_fd, buffer, strlen(buffer),0);
-
-    //wait for acknowledgement
-    waitForAck();
-}
-
-//function to perform bitwise inversion
-int invert(int value) {
-    if (value == 0) {
-        return 1;
-    } else {
+            fflush(stdout);
+            if(elapsed >= ACK_TIMEOUT)
+                return 1;
+        }
         return 0;
     }
-}
 
-char get_pb_zxcvqr(void) {
-    char buf = 0;
-    struct termios old = {0};
-    if (tcgetattr(0, &old) < 0)
-        perror("tcsetattr()");
-    old.c_lflag &= ~ICANON;
-    old.c_lflag &= ~ECHO;
-    old.c_cc[VMIN] = 1;
-    old.c_cc[VTIME] = 0;
-    if (tcsetattr(0, TCSANOW, &old) < 0)
-        perror("tcsetattr ICANON");
-    if (read(0, &buf, 1) < 0)
-        perror ("read()");
-    old.c_lflag |= ICANON;
-    old.c_lflag |= ECHO;
-    if (tcsetattr(0, TCSADRAIN, &old) < 0)
-        perror ("tcsetattr ~ICANON");
-    return (buf);
-}
+//fcn to initialize the frontend display
+    void startGame(void) {
+    //temp variables
+        char buffer[BUFFSIZE];
+
+    //construct message
+        sprintf(buffer, "start");
+
+    //send message
+        send(connection_fd, buffer, strlen(buffer),0);
+
+    //wait for acknowledgement
+        waitForAck();
+    }
+
+//function to perform bitwise inversion
+    int invert(int value) {
+        if (value == 0) {
+            return 1;
+        } else {
+            return 0;
+        }
+    }
+
+    char get_pb_zxcvqr(void) {
+        char buf = 0;
+        struct termios old = {0};
+        if (tcgetattr(0, &old) < 0)
+            perror("tcsetattr()");
+        old.c_lflag &= ~ICANON;
+        old.c_lflag &= ~ECHO;
+        old.c_cc[VMIN] = 1;
+        old.c_cc[VTIME] = 0;
+        if (tcsetattr(0, TCSANOW, &old) < 0)
+            perror("tcsetattr ICANON");
+        if (read(0, &buf, 1) < 0)
+            perror ("read()");
+        old.c_lflag |= ICANON;
+        old.c_lflag |= ECHO;
+        if (tcsetattr(0, TCSADRAIN, &old) < 0)
+            perror ("tcsetattr ~ICANON");
+        return (buf);
+    }
 
 
 // Callback routine is interrupt activated by a debounced pb hit
-void pb1_hit_callback (void) {
-    if(power==PHIGH)
-        power=PLOW;
-    else 
-        power=PHIGH;
-}
-void pb2_hit_callback (void) {
-    if(angle<90)
-        angle++;
-    else if(angle>=90) 
-        angle=0;
-}
-void pb3_hit_callback (void) {
-    if(angle>0)
-        angle--;
-    else if(angle<=0)
-        angle=90;
-}
-void pb4_hit_callback (void) {
-    fire++;
-}
+    void pb1_hit_callback (void) {
+        if(power==PHIGH)
+            power=PLOW;
+        else 
+            power=PHIGH;
+    }
+    void pb2_hit_callback (void) {
+        if(angle<90)
+            angle++;
+        else if(angle>=90) 
+            angle=0;
+    }
+    void pb3_hit_callback (void) {
+        if(angle>0)
+            angle--;
+        else if(angle<=0)
+            angle=90;
+    }
+    void pb4_hit_callback (void) {
+        fire++;
+    }
 
 //func. to get world
-void getworld (int**world, unsigned char *World){
-    int i;
-    char temp[3];
-    
+    void getworld (int**world, unsigned char *World){
+        int i;
+        char temp[3];
+
     //allocate world
-    *world = (int*)malloc(sizeof(int)*(((World[2]<<8)+World[3])*4+2));
-    
+        *world = (int*)malloc(sizeof(int)*(((World[2]<<8)+World[3])*4+2));
+
     //get it
-    (*world)[0]=(World[0]<<8)+World[1];
-    (*world)[1]=(World[2]<<8)+World[3];
-    for(i=0;i<((*world)[1]*4);i++){
-        temp[0] = World[(2*i)+4];
-        temp[1] = World[(2*i)+5];
-        temp[2] = '\0';   
-        sscanf(temp, "%d", &((*world)[i+2]));            
+        (*world)[0]=(World[0]<<8)+World[1];
+        (*world)[1]=(World[2]<<8)+World[3];
+        for(i=0;i<((*world)[1]*4);i++){
+            temp[0] = World[(2*i)+4];
+            temp[1] = World[(2*i)+5];
+            temp[2] = '\0';   
+            sscanf(temp, "%d", &((*world)[i+2]));            
+        }
     }
-}
 
 
 // this is for getting the tree boundry.so we can find the Root object 
 // 1.   we need to find out all tree cols, only need the tree cols. 
 //      after that, sorting cols, we can find the not continuous cols, 
-int* getTreeBoundry(int *world){
+    int* getTreeBoundry(int *world){
 
     // contain not duplicate col # make it a array
-    int *treeColContainer=(int *)malloc(20* sizeof(int ));
-    int treeColContainerSize=0;
+        int *treeColContainer=(int *)malloc(20* sizeof(int ));
+        int treeColContainerSize=0;
 
-    if (treeColContainer==NULL)
-    {
-        printf("Cannot access memory at address IN container");
-        return NULL;
-    }
+        if (treeColContainer==NULL)
+        {
+            printf("Cannot access memory at address IN container");
+            return NULL;
+        }
 
-    int loopSize=world[1];
+        int loopSize=world[1];
    // printf("[DEBUG] world size is %d\n", loopSize);
-    int CurrentType;
-    int CurrentCol;
-    bool containerInsideValid;
+        int CurrentType;
+        int CurrentCol;
+        bool containerInsideValid;
     // search whole array to find it is a tree type
-    for (int i = 0; i < loopSize; ++i)
-    {   
+        for (int i = 0; i < loopSize; ++i)
+        {   
         containerInsideValid=false;  // assume it is not in there 
         CurrentType=world[i*4+4];
         //printf("[DEBUG] CurrentType is %d\n", CurrentType);
@@ -660,11 +752,11 @@ int* getTreeBoundry(int *world){
     int *returnPointer = (int * )malloc( (index+1) * sizeof(int ));
     returnPointer[0] = index;
     memcpy(returnPointer+1, m_returnPointer, index*sizeof(int));
-    printf("[DEBUG] total tree boundary size : %d \n", returnPointer[0]);
-    for (int i = 1; i <= index; ++i)
-    {
-        printf("[DEBUG] one tree @ col : %d\n", returnPointer[i] );
-    }
+    //printf("[DEBUG] total tree boundary size : %d \n", returnPointer[0]);
+    // for (int i = 1; i <= index; ++i)
+    // {
+    //     printf("[DEBUG] one tree @ col : %d\n", returnPointer[i] );
+    // }
     // // until here, we have a array
     //free treecontainer, avoid memery leak
     free(treeColContainer);
@@ -783,7 +875,7 @@ int* getContent(int *world){
 
     }
     // printf("[DEBUG] allSize %d\n", allSize);
-    printf("[DEBUG] contentSize %d\n", contentSize);
+    //printf("[DEBUG] contentSize %d\n", contentSize);
 
 
     int* ptr_return=(int *)malloc((4*contentSize+1)*sizeof(int));
@@ -793,7 +885,7 @@ int* getContent(int *world){
         return NULL;
     }
     ptr_return[0]=contentSize;
-    printf("size is %d \n",  ptr_return[0]);
+   // printf("size is %d \n",  ptr_return[0]);
     memcpy(ptr_return+1,ptr_contain, 4*contentSize*sizeof(int));
     free(ptr_contain);
 
@@ -818,7 +910,7 @@ listList* getBranchList(Node* root, int* content){
     m_llist->Tail = NULL;
 
     int contentSize=content[0];
-            
+
     Node *m_node=root;
             // new object, mark -1 as initialized
     m_node->visit = -1;
@@ -851,11 +943,11 @@ listList* getBranchList(Node* root, int* content){
                     ( ((m_node->col == m_col+1 ) || (m_node->col == m_col - 1 )) && (m_node->row == m_row) )    ) {
 
                             // whether connected already or not. 
-                printf("[DEBUG] stepped inside \n");
+                //printf("[DEBUG] stepped inside \n");
                             // is that parent, 
                     if (m_node->parent != NULL) 
                     {
-                         printf("[DEBUG] stepped inside parent \n");
+                        // printf("[DEBUG] stepped inside parent \n");
                         if (m_row == m_node->parent->row && m_col == m_node->parent->col)
                         {
                             continue;
@@ -927,13 +1019,13 @@ listList* getBranchList(Node* root, int* content){
                 m_branchlist->Tail = m_nodeContainer;
             }
 
-                listContainer* m_listHead = (listContainer*)malloc(sizeof(listContainer));
-                m_listHead->data = m_branchlist;
-                m_listHead->next = NULL;
+            listContainer* m_listHead = (listContainer*)malloc(sizeof(listContainer));
+            m_listHead->data = m_branchlist;
+            m_listHead->next = NULL;
 
             if (m_llist->Head==NULL)
             {
-                printf("add the first branchlist.\n");
+               // printf("add the first branchlist.\n");
                 m_llist->Head = m_listHead;
                 m_llist->Tail = m_listHead;
 
@@ -945,7 +1037,7 @@ listList* getBranchList(Node* root, int* content){
             // }
 
             }else{
-                printf("add the another branchlist at Tail.\n");
+                //printf("add the another branchlist at Tail.\n");
                 m_llist->Tail->next = m_listHead;
                 m_llist->Tail = m_listHead;
 
@@ -1010,7 +1102,7 @@ listList* getBranchList(Node* root, int* content){
 
     // listContainer* m_loglist = m_llist->Head;
     // while(m_loglist!=NULL){
-        
+
     //         nodeContainer* m_debug = m_loglist->data->Head;
     //         while(m_debug!=NULL){
 
@@ -1044,7 +1136,7 @@ listList* conbineBranchHead(rootList* m_rootlist, int* ptr_Content){
     while(m_root!=NULL){
 
         Node* m_data=m_root->data;
-        printf("[DEBUG]  current root @ %d,%d\n",m_data->row,m_data->col );
+        //printf("[DEBUG]  current root @ %d,%d\n",m_data->row,m_data->col );
         m_currentList=getBranchList(m_data,ptr_Content);
         // read everything from head to tail store into m_llist
 
@@ -1066,5 +1158,116 @@ listList* conbineBranchHead(rootList* m_rootlist, int* ptr_Content){
     }
 
     return m_llist;
+
+}
+
+// for runing usage, when hit a tree type, 
+// we are going to delete this node and every node row > m_row  && col== m_col
+//  and every branch depends on it. 
+void deleteTree(int row, int col, int* world, listList* m_llist){
+    // let's delete tree first
+
+    int objSize=world[1];
+    int i=0;
+//    printf("[DEBUG] deleteing tree , has obj\n" );
+    while(i < objSize){
+        int m_row = world[4*i+2];
+        int m_col = world[4*i+3];
+
+        if (row <= m_row && col == m_col)
+        {
+            deleteTile(m_row,m_col);
+        }
+        i++;
+
+    }
+
+//    printf("[DEBUG] deleteing tree \n" );
+    // done
+
+    int leftRoot = col - 1;
+    int rightRoot = col + 1;
+    nodeContainer* delete_node;
+    // find any root meet left or right condition
+    // m_branchlist -> data contain a list, it's Tail point to a root.
+    listContainer* m_branchlist = m_llist->Head;
+    while(m_branchlist!=NULL){
+        Node* m_root = m_branchlist->data->Tail->data;
+        if ((leftRoot == m_root->col  || rightRoot == m_root->col) && m_root->row >= row)
+        {
+
+            // this branch need to be delete
+            delete_node = m_branchlist->data->Head;
+            while(delete_node!=NULL){
+                int delete_row = delete_node->data->row;
+                int delete_col = delete_node->data->col;
+                deleteTile(delete_row,delete_col);
+                delete_node=delete_node->next;
+            }
+        }
+
+        m_branchlist=m_branchlist->next;
+
+    }
+
+}
+
+// for runing usage, when hit a branch type, 
+// we are going to  start from one BranchHead, visit every node until find the correct
+// node. 
+// delete everyone from Head to match Node
+// method to delete, remember the Head, delete one by one, don't free. 
+// after delete done, set BranchHead->data to match item's parent, 
+void deleteBranch(int row, int col, int* world, listList* m_llist){
+
+
+
+    // m_branchlist -> data contain a list, it's Tail point to a root.
+    listContainer* m_branchlist = m_llist->Head;
+    while(m_branchlist!=NULL){
+
+        // get branchHead and remember it so we know where we start to delete.
+        nodeContainer* m_head = m_branchlist->data->Head;      
+        nodeContainer* m_match = m_branchlist->data->Head;;
+        bool matchFound = false;
+        while(m_match!=NULL){
+
+        if (col == m_match->data->col && m_match->data->row == row)
+        {
+
+            //we find the thing
+            matchFound = true;
+            break;
+        }
+
+        m_match = m_match->next;
+
+        }
+
+        if (matchFound)
+        {
+        // if we find the match item in this list, delete operation and 
+            nodeContainer* delete_node = m_head;
+            while(delete_node!=m_match->next){
+
+                int delete_row = delete_node->data->row;
+                int delete_col = delete_node->data->col;
+                deleteTile(delete_row,delete_col);
+                delete_node = delete_node->next;                            
+            }
+            // delete everyone in the front end, until match item's parent
+            // point this branch head to m_match's parent, which is ->next
+            // to avoid multiple calculation after delete, 
+            // note : we just move the pointer but not delete this  item
+            // delete memories avoid memory leak.
+            m_branchlist->data->Head = m_match->next;
+        }
+        // keep search 
+
+        m_branchlist=m_branchlist->next;
+
+    }
+
+
 
 }
